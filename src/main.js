@@ -35,13 +35,14 @@ function detail(index) {
 
 function onPhase(phase,index=-1) {
   $('experience').dataset.phase=phase;
-  if(phase==='pack')$('experience-title').innerHTML='Good things <br />come in <em>packs.</em>';
+  if(phase==='pack')$('experience-title').innerHTML='Meet the <br /><em>collective.</em>';
   if(phase==='collection')$('experience-title').innerHTML='All here. <em>All different.</em>';
   for(const [key,element]of Object.entries(controls))element.hidden=key!==phase;
   $('member-detail').hidden=phase!=='inspect';
+  $('tear-track').hidden=phase!=='pack';
   $('rotation-label').textContent=phase==='collection'?'4 / 4 · YOUR COLLECTIVE':'360° OBJECT VIEW';
   $('opening-caption').textContent=phase==='opening'?'A LITTLE MAGIC, COMING YOUR WAY.':'';
-  $('scene').setAttribute('aria-label',phase==='inspect'?`${members[index].name} 的 3D 成员卡，拖动查看；回车键翻面`:phase==='collection'?'四张 3D 成员卡，点击选中成员':'可交互的 3D 伙伴卡包，拖动旋转；使用下方滑块或拆包按钮开启');
+  $('scene').setAttribute('aria-label',phase==='inspect'?`${members[index].name} 的 3D 成员卡，拖动查看；回车键翻面`:phase==='collection'?'四张 3D 成员卡，点击选中成员':'可交互的 3D 伙伴卡包，拖动旋转；沿顶部封口向右滑动开启');
   if(phase==='opening'){playSound('open');announce('正在拆开卡包，四位伙伴即将登场。');}
   if(phase==='collection'){announce('卡包已打开。选择 Muses、Hermes、Ruby 或 Hecate 查看成员卡。');}
   if(phase==='inspect'){fallbackIndex=index;fallbackFlipped=false;detail(index);$('flip-card').innerHTML='翻到背面 <span>⤾</span>';playSound('choose');announce(`正在查看 ${members[index].name}，${members[index].role}。`);}
@@ -72,19 +73,26 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&world?.state().phas
 
 let tearing=null;
 const track=$('tear-track');
+track.addEventListener('pointerenter',()=>world?.holdSeal(true));
+track.addEventListener('pointerleave',()=>{if(!tearing)world?.holdSeal(false);});
+track.addEventListener('focus',()=>world?.holdSeal(true));
+track.addEventListener('blur',()=>world?.holdSeal(false));
 track.addEventListener('pointerdown',e=>{
   if(world?.state().phase!=='pack'||e.button>0)return;
-  tearing={id:e.pointerId,x:e.clientX,start:world.state().progress};track.setPointerCapture(e.pointerId);e.preventDefault();
+  world.holdSeal(true);
+  const matrix=new DOMMatrix(getComputedStyle(track).transform);
+  tearing={id:e.pointerId,x:e.clientX,y:e.clientY,start:world.state().progress,cos:matrix.a,sin:matrix.b,distance:track.clientWidth-34};track.setPointerCapture(e.pointerId);e.preventDefault();
 });
 track.addEventListener('pointermove',e=>{
   if(!tearing||tearing.id!==e.pointerId)return;
-  const distance=track.clientWidth-47;
-  world?.setProgress(tearing.start+(e.clientX-tearing.x)/distance);
+  const movement=(e.clientX-tearing.x)*tearing.cos+(e.clientY-tearing.y)*tearing.sin;
+  world?.setProgress(tearing.start+movement/tearing.distance);
 });
 function endTear(e) {
   if(!tearing||e.pointerId!==tearing.id)return;
   tearing=null;if(track.hasPointerCapture(e.pointerId))track.releasePointerCapture(e.pointerId);
   if(world?.state().phase==='pack')world.setProgress(0);
+  world?.holdSeal(false);
 }
 track.addEventListener('pointerup',endTear);track.addEventListener('pointercancel',endTear);
 track.addEventListener('keydown',e=>{
@@ -104,11 +112,15 @@ $('fallback-open').addEventListener('click',()=>{fallback=true;$('fallback').hid
 try {
   world=await createScene($('scene'),members,{
     onPhase,onProgress,
+    onSealProjection({left,top,width,angle,dragging}){
+      track.style.left=`${left}px`;track.style.top=`${top}px`;track.style.width=`${width}px`;track.style.transform=`rotate(${angle}rad)`;track.style.visibility=dragging?'hidden':'';
+    },
+    onOpeningStage(stage){$('opening-caption').textContent={tear:'撕开封边，一点点期待。',extract:'把好伙伴，从包装里请出来。',fan:'四位伙伴，依次登场。'}[stage];},
     onFlip(flipped){$('flip-card').innerHTML=`${flipped?'翻回正面':'翻到背面'} <span>⤾</span>`;playSound('flip');announce(flipped?'已翻到卡片背面。':'已翻回卡片正面。');},
     onContextLost(){ $('loading').classList.remove('is-ready');$('loading').lastElementChild.textContent='画面正在恢复，稍等一下'; },
     onContextRestored(){ $('loading').classList.add('is-ready'); },
   });
-  window.__PACK__={ready:true,state:world.state,projectCard:world.projectCard,projectPack:world.projectPack,artwork:world.artwork};
+  window.__PACK__={ready:true,version:'2.0',state:world.state,projectCard:world.projectCard,projectPack:world.projectPack,artwork:world.artwork};
   $('loading').classList.add('is-ready');onPhase('pack');
 }catch(error){
   console.warn('3D view unavailable:',error.message);fallback=true;$('loading').hidden=true;$('fallback').hidden=false;controls.pack.hidden=true;

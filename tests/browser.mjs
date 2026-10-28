@@ -21,6 +21,13 @@ async function gesture(page,mobile,from,to,{cancel=false,hold=false}={}){
   const during=await page.evaluate(()=>window.__PACK__.state());await page.mouse.up();return during;
 }
 async function layout(page){assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');}
+async function sealGesture(page,mobile,partial=false){
+  const slider=page.getByRole('slider',{name:'向右滑动拆开卡包'});
+  await slider.evaluate(el=>el.scrollIntoView({block:'nearest'}));
+  const pose=await slider.evaluate(el=>{const r=el.querySelector('.tear-knob').getBoundingClientRect(),m=new DOMMatrix(getComputedStyle(el).transform);return{x:r.x+r.width/2,y:r.y+r.height/2,dx:m.a*(el.clientWidth-30),dy:m.b*(el.clientWidth-30)};});
+  const portion=partial?.35:1;
+  return gesture(page,mobile,pose,{x:pose.x+pose.dx*portion,y:pose.y+pose.dy*portion},{cancel:partial&&mobile});
+}
 
 try{
   for(const [name,viewport,mobile]of [['desktop',{width:1440,height:1000},false],['phone',{width:390,height:844},true],['small-phone',{width:320,height:568},true],['landscape',{width:844,height:390},true]]){
@@ -34,12 +41,10 @@ try{
     const point=await page.evaluate(()=>window.__PACK__.projectPack());
     await gesture(page,mobile,point,{x:point.x+Math.min(125,viewport.width*.26),y:point.y+15});await page.waitForTimeout(300);
     const rotated=await page.evaluate(()=>window.__PACK__.state());assert.ok(Math.abs(rotated.rotation.y-initial.rotation.y)>.35,'drag rotates actual 3D pack');
-    const slider=page.getByRole('slider',{name:'向右滑动拆开卡包'});await slider.scrollIntoViewIfNeeded();
-    let box=await slider.boundingBox(),start={x:box.x+24,y:box.y+box.height/2};
-    await gesture(page,mobile,start,{x:start.x+70,y:start.y},{cancel:mobile});await page.waitForTimeout(100);
+    const slider=page.getByRole('slider',{name:'向右滑动拆开卡包'});await slider.evaluate(el=>el.scrollIntoView({block:'nearest'}));
+    await sealGesture(page,mobile,true);await page.waitForTimeout(100);
     assert.equal((await page.evaluate(()=>window.__PACK__.state())).phase,'pack');assert.equal(await slider.getAttribute('aria-valuenow'),'0','incomplete tear resets');
-    box=await slider.boundingBox();start={x:box.x+24,y:box.y+box.height/2};
-    await gesture(page,mobile,start,{x:box.x+box.width-7,y:start.y});
+    await sealGesture(page,mobile);
     await page.waitForFunction(()=>window.__PACK__.state().phase==='collection',{timeout:10000});await page.waitForTimeout(600);await layout(page);
     await page.screenshot({path:`artifacts/screenshots/${name}-collection.png`,fullPage:true});
     const cardPoint=await page.evaluate(()=>window.__PACK__.projectCard(3));

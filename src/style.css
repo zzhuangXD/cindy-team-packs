@@ -79,4 +79,22 @@ h1{font-weight:500;letter-spacing:-3px;font-size:clamp(39px,4.2vw,69px);line-hei
 }
 @media(max-width:360px){.site-header{padding:0 17px}.wordmark{font-size:27px}.wordmark-small{font-size:18px}.brand-star{font-size:27px}.sound-button{font-size:7px}.editorial-intro{padding-top:22px}h1{font-size:31px}.eyebrow{font-size:7px}.intro-copy{font-size:9px}.stage{height:clamp(300px,50svh,420px)}.member-detail{margin-left:24px;margin-right:24px}.member-role{max-width:140px}}
 @media(max-height:550px) and (min-width:701px){.site-header{height:62px}.experience{height:calc(100svh - 110px);min-height:390px}.interaction-dock{min-height:90px;padding-bottom:15px}.stage{min-height:300px}.editorial-intro{top:15%}h1{font-size:37px}.eyebrow{margin-bottom:16px}.edition-note{display:none}.member-detail{top:9%;width:240px}.member-detail h2{font-size:32px}.detail-rule{margin:15px 0}.member-headline{font-size:17px;margin-bottom:9px}.member-description{font-size:10px;line-height:1.7;margin-bottom:14px}.detail-bottom{display:none}.member-skills span{font-size:8px;padding:5px 7px}.collection-controls{gap:9px}.experience[data-phase=collection] .editorial-intro{top:0}.experience[data-phase=collection] h1{font-size:26px}.site-footer{height:48px}}
+.tear-track{position:absolute;z-index:4;width:230px;height:38px;border:0;border-radius:0;background:none;transform-origin:center;box-shadow:none;opacity:.94}
+.tear-track:focus-visible{outline-color:#ffdee9;outline-offset:3px}
+.tear-knob{left:calc(2px + var(--progress)*(100% - 32px));top:4px;width:28px;height:28px;border:1px solid #ffe4ed;background:#6c05204d;border-radius:50%;color:#ffe4ed;font-size:16px}
+.tear-track:active .tear-knob{background:#ffdae43d}
+.tear-label{inset:0 5px 0 37px;padding:0;justify-content:flex-start;color:#ffe5ee;font-size:9px;letter-spacing:1.1px;opacity:calc(1 - var(--progress)*.9);text-shadow:0 1px 5px #4f0023}
+.tear-fill{inset:auto 7px 5px 2px;height:1px;background:#ffdce9;opacity:.6}
+.editorial-intro{top:24%}h1{font-size:clamp(37px,3.7vw,59px)}
+.pack-controls .dock-caption{margin-top:0}.experience[data-phase=pack] .interaction-dock{min-height:115px;padding-top:0}
+.experience[data-phase=opening] .interaction-dock{min-height:115px}
+@media(max-width:700px){
+  .editorial-intro{top:auto;height:110px;padding:23px 15px 0}h1{font-size:31px}.intro-copy{margin-top:9px;font-size:9px}
+  .eyebrow{margin-bottom:12px}.tear-label{font-size:8px;letter-spacing:.8px}
+  .experience[data-phase=opening] .editorial-intro{height:110px;padding-top:23px}
+  .experience[data-phase=pack] .interaction-dock,.experience[data-phase=opening] .interaction-dock{min-height:90px;padding-top:7px}
+  .experience[data-phase=pack] .stage,.experience[data-phase=opening] .stage,.experience[data-phase=collection] .stage{height:clamp(330px,55svh,540px)}
+  .pack-controls{width:min(100%,315px)}.dock-caption>span{font-size:8px}
+}
+@media(max-width:360px){h1{font-size:28px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}

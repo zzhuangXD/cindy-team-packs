@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PACK } from './geometry.js';
 
 const INK = '#302e29';
 const PAPER = '#f3f0e5';
@@ -139,44 +140,60 @@ export function cardArtwork(member, avatar, renderer) {
 }
 
 export function packArtwork(members, avatars, renderer) {
-  const { element: front, ctx } = canvas(1056, 1616);
-  const base = ctx.createLinearGradient(0, 0, 1056, 1616);
-  base.addColorStop(0,'#b6b2c7');base.addColorStop(0.3,'#ddd4d4');base.addColorStop(0.6,'#b8bdc6');base.addColorStop(1,'#c0c9b0');ctx.fillStyle=base;ctx.fillRect(0,0,1056,1616);
-  // Thin bands and registration marks read as print on the foil, not floating UI.
-  ctx.fillStyle=INK;ctx.fillRect(0,138,1056,3);ctx.fillRect(0,1468,1056,3);
-  type(ctx,'CINDY COLLECTIVE',78,217,29,INK,700);
-  type(ctx,'VOL. 01',976,217,27,INK,500,'right');
-  type(ctx,'GOOD COMPANY,',79,305,26,INK,500);
-  type(ctx,'GREAT POSSIBILITIES.',79,344,26,INK,500);
-  type(ctx,'cindy',57,560,230,INK,800);
-  ctx.save();ctx.translate(80,742);ctx.rotate(-0.075);ctx.fillStyle=INK;ctx.font='italic 154px Georgia, serif';ctx.fillText('& friends',0,0);ctx.restore();
-  star(ctx,528,956,155,INK);
-  ctx.save();ctx.translate(775,1020);ctx.rotate(-0.2);rounded(ctx,-106,-52,212,104,50,'#d9ef99',INK);type(ctx,'4 GOOD',0,-4,25,INK,700,'center');type(ctx,'MINDS',0,30,25,INK,700,'center');ctx.restore();
-  const xs = [148, 398, 648, 898];
-  members.forEach((m,i)=>{
-    const x=xs[i];ctx.save();ctx.beginPath();ctx.arc(x,1272,81,0,Math.PI*2);ctx.fillStyle=m.light;ctx.fill();ctx.clip();
-    if(avatars[i])coverImage(ctx,avatars[i],x-81,1191,162,162);ctx.restore();
-    ctx.lineWidth=3;ctx.strokeStyle=INK;ctx.beginPath();ctx.arc(x,1272,81,0,Math.PI*2);ctx.stroke();
-    type(ctx,m.name,x,1390,25,INK,600,'center');
-  });
-  type(ctx,'4 MEMBER CARDS • ONE SHARED WORLD',528,1442,24,INK,500,'center');
-  type(ctx,'TEAR HERE  →  →  →',528,120,21,INK,600,'center');
-  grain(ctx,1056,1616,0.035);
-
-  const { element: back, ctx:b } = canvas(1056,1616);
-  b.fillStyle='#b8c0be';b.fillRect(0,0,1056,1616);
-  type(b,'HELLO,',80,341,139,INK,800);type(b,'WE ARE',80,488,139,INK,800);type(b,'YOUR PEOPLE.',80,635,114,INK,800);
-  type(b,'一个卡包，四位伙伴。',83,784,40,INK,500);
-  type(b,'不同的擅长，一起把想法变成可能。',83,853,30,INK,400);
-  members.forEach((m,i)=>{const y=1000+i*71;type(b,m.number,84,y,24,INK,400);type(b,m.name,170,y,38,INK,700);type(b,m.role,970,y,23,INK,400,'right');});
-  let seed=39;for(let i=0;i<90;i++){seed=(seed*16807)%2147483647;const w=seed%4+1;if(i%3)b.fillStyle=INK;else b.fillStyle='#b8c0be';b.fillRect(83+i*5,1370,w,95);}
-  type(b,'COLLECTIVE ORIGINALS / 2026',970,1457,21,INK,500,'right');
-  b.strokeStyle='#8f9894';b.lineWidth=12;b.beginPath();b.moveTo(528,0);b.lineTo(528,160);b.moveTo(528,1510);b.lineTo(528,1616);b.stroke();
-  grain(b,1056,1616,0.04);
-  const {element: bump,ctx:bc}=canvas(256,512);
-  bc.fillStyle='#808080';bc.fillRect(0,0,256,512);
-  for(let y=0;y<512;y+=3){bc.strokeStyle=y%9===0?'#939393':'#777777';bc.lineWidth=1;bc.beginPath();bc.moveTo(0,y);bc.lineTo(256,y);bc.stroke();}
-  return {front:texture(front,renderer),back:texture(back,renderer),bump:new THREE.CanvasTexture(bump)};
+  const ink = '#e7a6ba';
+  const logicalHeight=1056*PACK.height/PACK.width, yScale=logicalHeight/1616;
+  const imageHeight=Math.round(768*PACK.height/PACK.width), maskHeight=Math.round(512*PACK.height/PACK.width);
+  function surface(back = false) {
+    const {element,ctx}=canvas(768,imageHeight);ctx.scale(768/1056,imageHeight/logicalHeight);
+    const {element:metal,ctx:mask}=canvas(512,maskHeight);
+    mask.scale(512/1056,maskHeight/logicalHeight);mask.fillStyle='#f4f4f4';mask.fillRect(0,0,1056,logicalHeight);
+    const base=ctx.createLinearGradient(0,0,1056,logicalHeight);
+    base.addColorStop(0,'#87031f');base.addColorStop(.38,back?'#7b0621':'#8c0626');base.addColorStop(1,'#6f061f');
+    ctx.fillStyle=base;ctx.fillRect(0,0,1056,logicalHeight);
+    const label=(text,x,y,size,weight=500,align='left')=>{
+      type(ctx,text,x,y*yScale,size,ink,weight,align);type(mask,text,x,y*yScale,size,'#181818',weight,align);
+    };
+    label('CINDY COLLECTIVE',83,229,25,600);label('FIRST EDITION',973,229,23,500,'right');
+    if(!back){
+      label('FOUR MINDS. ONE SHARED WORLD.',528,535,24,500,'center');
+      label('cindy',528,720,176,700,'center');
+      for(const [context,color]of [[ctx,ink],[mask,'#181818']]){
+        context.save();context.translate(528,845*yScale);context.rotate(-.06);context.fillStyle=color;context.font='italic 129px Georgia, serif';context.textAlign='center';context.fillText('& friends',0,0);context.restore();
+        star(context,528,1033*yScale,68,color);
+        context.lineWidth=1.5;context.strokeStyle=color;context.beginPath();context.ellipse(528,775*yScale,350,360*yScale,-.06,0,Math.PI*2);context.stroke();
+      }
+      members.forEach((m,i)=>{
+        const x=207+i*214;
+        ctx.save();ctx.beginPath();ctx.arc(x,1303*yScale,58,0,Math.PI*2);ctx.clip();if(avatars[i])coverImage(ctx,avatars[i],x-58,1303*yScale-58,116,116);ctx.restore();
+        mask.fillStyle='#080808';mask.beginPath();mask.arc(x,1303*yScale,60,0,Math.PI*2);mask.fill();
+        label(m.name,x,1403,25,500,'center');
+      });
+      label('4 ORIGINAL MEMBER CARDS',528,1480,21,500,'center');
+    }else{
+      label('GOOD',82,480,126,700);label('COMPANY.',82,622,126,700);
+      label('一个卡包，四位伙伴。',85,793,38);label('不同的擅长，一起把想法变成可能。',85,856,28);
+      members.forEach((m,i)=>{const y=1010+i*77;label(m.number,85,y,24);label(m.name,170,y,36,700);label(m.role,973,y,21,500,'right');});
+      let seed=39;for(let i=0;i<90;i++){seed=(seed*16807)%2147483647;if(i%3){ctx.fillStyle=ink;mask.fillStyle='#181818';ctx.fillRect(85+i*4,1370*yScale,seed%3+1,76);mask.fillRect(85+i*4,1370*yScale,seed%3+1,76);}}
+      label('COLLECTIVE ORIGINALS / 2026',974,1472,19,500,'right');
+      ctx.fillStyle='#71081f';ctx.fillRect(512,0,31,logicalHeight);
+    }
+    grain(ctx,1056,logicalHeight,.025);
+    const {element:rough,ctx:r}=canvas(512,maskHeight),pixels=mask.getImageData(0,0,512,maskHeight);
+    for(let i=0;i<pixels.data.length;i+=4){const value=224-pixels.data[i]*.38;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;}
+    r.putImageData(pixels,0,0);
+    const metalMap=new THREE.CanvasTexture(metal),roughnessMap=new THREE.CanvasTexture(rough);
+    return {map:texture(element,renderer),metalnessMap:metalMap,roughnessMap};
+  }
+  const front=surface(),back=surface(true);
+  const {element:bump,ctx:bc}=canvas(256,512),noise=bc.createImageData(256,512);
+  let seed=731;
+  for(let y=0;y<512;y++)for(let x=0;x<256;x++){
+    seed=(seed*16807)%2147483647;const i=(y*256+x)*4;
+    const value=128+(seed/2147483647-.5)*7+Math.sin(x*.7+y*.09)*1.5;
+    noise.data[i]=noise.data[i+1]=noise.data[i+2]=value;noise.data[i+3]=255;
+  }
+  bc.putImageData(noise,0,0);
+  return {front,back,bump:new THREE.CanvasTexture(bump)};
 }
 
 export function loadAvatar(url) {

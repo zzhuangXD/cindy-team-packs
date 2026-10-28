@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { PACK, createPouchPart, openPouchMouth, cardFaceGeometry, easeOutCubic, smooth } from './geometry.js';
+import { PACK, createPouchPart, openPouchMouth, curlSeal, cardFaceGeometry, easeOutCubic, smooth } from './geometry.js';
 import { cardArtwork, packArtwork, loadAvatar } from './textures.js';
+import { OPENING_DURATION, openingMotion } from './motion.js';
 
 const lerp = THREE.MathUtils.lerp;
 
@@ -12,32 +12,43 @@ export async function createScene(canvas, members, callbacks) {
   renderer.setClearColor(0x000000,0);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=1.02;
+  renderer.toneMappingExposure=1.1;
+  renderer.localClippingEnabled=true;
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(32,1,0.1,80);
   camera.position.set(0,0,10.2);camera.lookAt(0,0,0);
   const pmrem=new THREE.PMREMGenerator(renderer);
-  const environment=new RoomEnvironment();
-  const env=pmrem.fromScene(environment,0.04);
-  scene.environment=env.texture; environment.dispose();pmrem.dispose();
-  scene.add(new THREE.HemisphereLight(0xfffaf0,0x6c6470,2.6));
-  const key=new THREE.DirectionalLight(0xffffff,3.3);key.position.set(-3,5,5);scene.add(key);
-  const fill=new THREE.DirectionalLight(0xdbe3ff,2);fill.position.set(4,-1,3);scene.add(fill);
-  const warm=new THREE.DirectionalLight(0xffcf99,1.6);warm.position.set(-4,-2,-2);scene.add(warm);
+  const environment=new THREE.Scene();environment.background=new THREE.Color('#13121b');
+  function softbox(width,height,position,strength,color=[1,1,1]){
+    const material=new THREE.MeshBasicMaterial({color:new THREE.Color(...color).multiplyScalar(strength),side:THREE.DoubleSide,toneMapped:false});
+    const panel=new THREE.Mesh(new THREE.PlaneGeometry(width,height),material);panel.position.set(...position);panel.lookAt(0,0,0);environment.add(panel);
+  }
+  // Narrow white softboxes and dark surroundings produce long, moving foil reflections.
+  softbox(1.5,8,[-4.2,1,4.5],7,[1,.96,.92]);
+  softbox(.65,7,[4.5,.4,2.5],5.5,[.9,.94,1]);
+  softbox(6,1.4,[0,5,1.5],4.8);
+  softbox(4,5,[.5,0,7],.65,[1,.85,.9]);
+  const env=pmrem.fromScene(environment,.025);
+  scene.environment=env.texture;environment.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});pmrem.dispose();
+  scene.add(new THREE.HemisphereLight(0xfff6ea,0x34293e,.85));
+  const key=new THREE.DirectionalLight(0xfff5ee,2.1);key.position.set(-3,5,5);scene.add(key);
+  const fill=new THREE.DirectionalLight(0xdce4ff,.45);fill.position.set(4,-1,3);scene.add(fill);
 
   await document.fonts.ready;
   const avatars=await Promise.all(members.map(m=>loadAvatar(m.avatar)));
   const print=packArtwork(members,avatars,renderer);
-  const material=(map)=>new THREE.MeshPhysicalMaterial({map,metalnessMap:map,metalness:1,roughness:0.33,clearcoat:0.36,clearcoatRoughness:0.3,envMapIntensity:1.05,bumpMap:print.bump,bumpScale:0.0009});
+  const material=(finish)=>new THREE.MeshPhysicalMaterial({...finish,metalness:1,roughness:.5,clearcoat:.8,clearcoatRoughness:.21,envMapIntensity:1.4,bumpMap:print.bump,bumpScale:.002,anisotropy:.15,anisotropyRotation:Math.PI/2});
   const frontMaterial=material(print.front),backMaterial=material(print.back);
-  const edgeMaterial=new THREE.MeshStandardMaterial({color:0xc9c6c2,metalness:1,roughness:0.3});
-  const packMaterials=[frontMaterial,backMaterial,edgeMaterial];
+  const edgeMaterial=new THREE.MeshStandardMaterial({color:0xa58b98,metalness:1,roughness:.3});
+  const closureMaterial=new THREE.MeshStandardMaterial({color:0x8c7683,metalness:1,roughness:.3});
+  const packMaterials=[frontMaterial,backMaterial,edgeMaterial,closureMaterial];
   const pouch=new THREE.Group(); scene.add(pouch);
   const body=new THREE.Mesh(createPouchPart(-PACK.height/2,PACK.tearY),packMaterials);pouch.add(body);
   const seal=new THREE.Mesh(createPouchPart(PACK.tearY,PACK.height/2),packMaterials);pouch.add(seal);
-  const tearLine=new THREE.Mesh(new THREE.PlaneGeometry(PACK.width*0.92,0.008),new THREE.MeshBasicMaterial({color:0xe6f6a8,transparent:true,opacity:0}));
-  tearLine.position.set(0,PACK.tearY,0.13);pouch.add(tearLine);
+  const tearLine=new THREE.Mesh(new THREE.PlaneGeometry(PACK.width*.94,.008),new THREE.MeshBasicMaterial({color:0xf6c7da,transparent:true,opacity:0,toneMapped:false}));
+  tearLine.position.set(-PACK.width*.47,PACK.tearY,.18);tearLine.geometry.translate(PACK.width*.47,0,0);pouch.add(tearLine);
 
+  const mouthClip=new THREE.Plane(new THREE.Vector3(0,1,0),10000);
   const artworks=members.map((m,i)=>cardArtwork(m,avatars[i],renderer));
   const faceGeometry=cardFaceGeometry();
   const cards=artworks.map((art,i)=>{
@@ -47,6 +58,7 @@ export async function createScene(canvas, members, callbacks) {
     const front=new THREE.Mesh(faceGeometry,new THREE.MeshBasicMaterial({map:art.front,toneMapped:false}));front.position.z=0.021;front.userData.index=i;group.add(front);
     const back=new THREE.Mesh(faceGeometry,new THREE.MeshBasicMaterial({map:art.back,toneMapped:false}));back.position.z=-0.021;back.rotation.y=Math.PI;back.userData.index=i;group.add(back);
     const coating=new THREE.Mesh(faceGeometry,new THREE.MeshPhysicalMaterial({color:0xffffff,transparent:true,opacity:0.045,metalness:0.5,roughness:0.28,clearcoat:1,clearcoatRoughness:0.2,depthWrite:false}));coating.position.z=0.023;coating.userData.index=i;group.add(coating);
+    group.traverse(o=>{if(o.material)o.material.clippingPlanes=[mouthClip];});
     group.visible=false;scene.add(group);return group;
   });
 
@@ -56,23 +68,23 @@ export async function createScene(canvas, members, callbacks) {
   gradient.addColorStop(0,'rgba(48,39,57,0.22)');gradient.addColorStop(0.45,'rgba(48,39,57,0.09)');gradient.addColorStop(1,'rgba(48,39,57,0)');
   s.fillStyle=gradient;s.fillRect(0,0,256,128);
   const shadow=new THREE.Mesh(new THREE.PlaneGeometry(4.2,1.3),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false,opacity:0.7}));
-  shadow.position.set(0,-2.38,-0.6);scene.add(shadow);
+  shadow.position.set(0,-2.65,-.6);scene.add(shadow);
 
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   let width=1,height=1,aspect=1,mobile=false;
   let phase='pack',selected=-1,flipped=false,flipTarget=0,flipCurrent=0;
-  let progress=0,openingAt=0,collectionAt=0,now=0,lastTime=0,frameCount=0,fps=60;
-  let drag=null,rotationX=-0.045,rotationY=-0.16,targetX=-0.045,targetY=-0.16,velocity=0;
+  let progress=0,openingAt=0,openingProgress=0,collectionAt=0,now=0,lastTime=0,frameCount=0,fps=60;
+  let drag=null,rotationX=-0.035,rotationY=-0.22,targetX=-0.035,targetY=-0.22,velocity=0;
   let viewX=0,viewY=0,viewTargetX=0,viewTargetY=0,hover=-1;
-  let frameId=0,contextLost=false,disposed=false;
+  let frameId=0,contextLost=false,disposed=false,openingStage='',sealHeld=false,idleTime=0;
 
   function resize() {
     const r=canvas.getBoundingClientRect();width=r.width;height=r.height;aspect=width/height;mobile=width<700;
     renderer.setSize(width,height,false);camera.aspect=aspect;
     // The whole pack remains in view on narrow phones and short landscape screens.
     camera.position.z=mobile?Math.max(9.6,7.6/aspect):10.2;
-    camera.updateProjectionMatrix();
+    camera.updateProjectionMatrix();camera.updateMatrixWorld();
   }
   const observer=new ResizeObserver(resize);observer.observe(canvas.parentElement);observer.observe(canvas);resize();
 
@@ -82,14 +94,19 @@ export async function createScene(canvas, members, callbacks) {
   }
   function setProgress(value) {
     if(phase!=='pack')return;
-    progress=Math.max(0,Math.min(1,value));tearLine.material.opacity=progress;
-    seal.rotation.z=-0.06*progress;seal.position.set(progress*0.025,progress*0.014,progress*0.025);
+    progress=Math.max(0,Math.min(1,value));tearLine.material.opacity=.8;tearLine.scale.x=progress;
+    curlSeal(seal.geometry,progress);openPouchMouth(body.geometry,progress*.16);
+    closureMaterial.visible=progress<.02;
     callbacks.onProgress?.(progress);
     if(progress>=0.97)open();
   }
+  function holdSeal(held) {
+    sealHeld=held;
+    if(held&&phase==='pack'){targetX=rotationX;targetY=rotationY;velocity=0;}
+  }
   function open() {
     if(phase!=='pack')return;
-    phase='opening';progress=1;openingAt=performance.now()/1000;targetX=-0.01;targetY=0;velocity=0;
+    phase='opening';openingStage='';openingProgress=progress;progress=1;openingAt=performance.now()/1000;targetX=-0.01;targetY=0;velocity=0;
     if(drag&&canvas.hasPointerCapture(drag.id))canvas.releasePointerCapture(drag.id);
     drag=null;canvas.classList.remove('is-dragging');
     callbacks.onPhase?.(phase);
@@ -105,11 +122,11 @@ export async function createScene(canvas, members, callbacks) {
     callbacks.onPhase?.(phase);
   }
   function reset() {
-    phase='pack';selected=-1;progress=0;flipped=false;flipTarget=0;flipCurrent=0;
-    targetX=-0.045;targetY=-0.16;rotationX=targetX;rotationY=targetY;velocity=0;viewTargetX=0;viewTargetY=0;drag=null;
+    phase='pack';selected=-1;progress=0;flipped=false;flipTarget=0;flipCurrent=0;sealHeld=false;idleTime=0;mouthClip.set(new THREE.Vector3(0,1,0),10000);
+    targetX=-0.035;targetY=-0.22;rotationX=targetX;rotationY=targetY;velocity=0;viewTargetX=0;viewTargetY=0;drag=null;
     pouch.visible=true;pouch.scale.setScalar(1);pouch.position.set(0,0,0);seal.visible=true;seal.position.set(0,0,0);seal.rotation.set(0,0,0);
     for(const m of packMaterials){m.transparent=false;m.opacity=1;m.depthWrite=true;}
-    openPouchMouth(body.geometry,0);tearLine.visible=true;tearLine.material.opacity=0;cards.forEach(c=>{c.visible=false;});
+    openPouchMouth(body.geometry,0);curlSeal(seal.geometry,0);closureMaterial.visible=true;tearLine.visible=true;tearLine.scale.x=0;tearLine.material.opacity=0;cards.forEach(c=>{c.visible=false;});
     callbacks.onProgress?.(0);callbacks.onPhase?.(phase);
   }
   function flip() {
@@ -120,6 +137,7 @@ export async function createScene(canvas, members, callbacks) {
 
   function down(e) {
     if(phase==='opening'||e.button>0)return;
+    sealHeld=false;
     const h=hit(e,phase==='pack'?[pouch]:cards.filter(c=>c.visible));if(!h)return;
     let kind=phase==='pack'?'rotate':phase==='inspect'?'inspect':'choose';
     if(phase==='pack'){
@@ -142,7 +160,7 @@ export async function createScene(canvas, members, callbacks) {
     if(drag.kind==='tear')setProgress(dx/(Math.min(width*0.58,300)));
     if(drag.kind==='rotate'){
       targetY=drag.startY+dx*0.009;targetX=THREE.MathUtils.clamp(drag.startX+dy*0.005,-0.7,0.7);
-      velocity=(e.clientX-drag.lastX)/Math.max(8,performance.now()-drag.lastTime)*0.075;
+      velocity=THREE.MathUtils.clamp((e.clientX-drag.lastX)/Math.max(8,performance.now()-drag.lastTime)*1.8,-3.8,3.8);
     }
     if(drag.kind==='inspect'){
       viewTargetY=THREE.MathUtils.clamp(dx*0.006,-0.8,0.8);viewTargetX=THREE.MathUtils.clamp(dy*0.004,-0.48,0.48);
@@ -171,41 +189,58 @@ export async function createScene(canvas, members, callbacks) {
 
   function fanPose(index) {
     const offset=index-1.5;
-    return mobile?{x:offset*0.65,y:-Math.abs(offset)*0.08,z:(index*0.035),rz:-offset*0.13,scale:0.82}
-      :{x:offset*1.95,y:0.17-Math.abs(offset)*0.15,z:index*0.045,rz:-offset*0.08,scale:1.02};
+    return mobile?{x:offset*.62,y:.08-Math.abs(offset)*.16,z:index*.22,rz:-offset*.16,ry:offset*.035,scale:.82}
+      :{x:offset*1.96,y:.2-Math.abs(offset)*.2,z:index*.22,rz:-offset*.105,ry:offset*.03,scale:1.0};
+  }
+  function projectSeal() {
+    if(!callbacks.onSealProjection)return;
+    pouch.updateMatrixWorld();
+    const a=new THREE.Vector3(-PACK.width*.45,PACK.tearY+.08,.12).applyMatrix4(pouch.matrixWorld).project(camera);
+    const b=new THREE.Vector3(PACK.width*.45,PACK.tearY+.08,.12).applyMatrix4(pouch.matrixWorld).project(camera);
+    const ax=(a.x+1)*width/2,ay=(1-a.y)*height/2,bx=(b.x+1)*width/2,by=(1-b.y)*height/2;
+    let angle=Math.atan2(by-ay,bx-ax);if(angle>Math.PI/2)angle-=Math.PI;if(angle<-Math.PI/2)angle+=Math.PI;
+    const trackWidth=Math.max(164,Math.min(320,Math.hypot(bx-ax,by-ay)-12));
+    callbacks.onSealProjection({left:Math.round((ax+bx)/2-trackWidth/2),top:Math.round((ay+by)/2-19),width:Math.round(trackWidth),angle:Math.round(angle*180/Math.PI*2)/2*Math.PI/180,dragging:drag?.kind==='rotate'});
   }
   function animate(ms) {
     if(disposed)return;frameId=requestAnimationFrame(animate);if(document.hidden||contextLost)return;
     now=ms/1000;const dt=Math.min(0.05,Math.max(0.001,now-lastTime));lastTime=now;fps=lerp(fps,1/dt,0.03);frameCount++;
     const smoothing=1-Math.exp(-dt*10);
-    if(phase==='pack'&&!drag){targetY+=velocity;velocity*=Math.exp(-dt*5);}
+    if(phase==='pack'&&!drag&&!sealHeld){targetY+=velocity*dt;velocity*=Math.exp(-dt*5);idleTime+=dt;}
     rotationX=lerp(rotationX,targetX,smoothing);rotationY=lerp(rotationY,targetY,smoothing);
     if(phase==='pack'){
-      pouch.rotation.set(rotationX,rotationY,0.025+(reduced.matches?0:Math.sin(now*0.56)*0.018));
-      pouch.position.y=reduced.matches?0:Math.sin(now*1.1)*0.048;
+      pouch.rotation.set(rotationX,rotationY,-.095+(reduced.matches?0:Math.sin(idleTime*.56)*.012));
+      pouch.position.y=reduced.matches?0:Math.sin(idleTime*1.1)*0.048;
+      projectSeal();
     }
     if(phase==='opening'){
-      const elapsed=(now-openingAt)*(reduced.matches?2.7:1);
-      const tear=easeOutCubic(elapsed/0.65),extraction=smooth((elapsed-0.3)/1.05),spread=smooth((elapsed-1.15)/1.2),fade=smooth((elapsed-1.05)/0.8);
-      pouch.rotation.set(lerp(rotationX,0,tear),lerp(rotationY,0,tear),lerp(0.025,-0.12,fade));
-      pouch.position.y=-fade*1.2;pouch.scale.setScalar(1-fade*0.1);
-      seal.position.set(tear*1.8,tear*1.5,tear*0.8);seal.rotation.set(tear*0.4,tear*0.9,-tear*0.8);
-      seal.visible=fade<0.97;tearLine.visible=false;
-      if(frameCount%3===0)openPouchMouth(body.geometry,tear);
-      for(const m of packMaterials){m.transparent=true;m.opacity=1-fade;m.depthWrite=fade<0.2;}
+      const elapsed=(now-openingAt)*(reduced.matches?3.4:1);
+      const m=openingMotion(elapsed);
+      const stage=elapsed<.58?'tear':elapsed<1.45?'extract':'fan';
+      if(stage!==openingStage){openingStage=stage;callbacks.onOpeningStage?.(stage);}
+      pouch.rotation.set(lerp(rotationX,-.035,m.tear)+m.drop*.16,lerp(rotationY,0,m.tear),-.095-m.drop*.11);
+      pouch.position.set(Math.sin(elapsed*13)*Math.exp(-elapsed*4)*.035,-.07*m.tear-5.7*m.drop,0);
+      pouch.updateMatrixWorld();mouthClip.set(new THREE.Vector3(0,1,0),-PACK.tearY).applyMatrix4(pouch.matrixWorld);
+      seal.position.set(-7*Math.pow(m.peel,1.8),1.2*m.peel,.5*m.peel);seal.rotation.set(-.3*m.peel,.7*m.peel,.48*m.peel);
+      seal.visible=elapsed<1.2;tearLine.visible=false;closureMaterial.visible=false;
+      if(frameCount%2===0){openPouchMouth(body.geometry,m.mouth);curlSeal(seal.geometry,lerp(openingProgress,1,m.tear));}
       artworks.forEach((_,i)=>{
-        const c=cards[i],p=fanPose(i),lift=smooth((elapsed-0.42-i*0.08)/0.7);
-        c.visible=lift>0.01;const fromY=lerp(-0.12,1.55,lift);
-        c.position.set(p.x*spread,lerp(fromY,p.y,spread),lerp(-0.06+i*0.027,0.9+p.z,extraction));
-        c.rotation.set(0,lerp(-0.06,0,spread),p.rz*spread);c.scale.setScalar(lerp(0.9,p.scale,spread));
+        const c=cards[i],p=fanPose(i),motion=openingMotion(elapsed,i),offset=i-1.5;
+        const liftY=lerp(-.45,.45,motion.lift),stackZ=-.0675+i*.045;
+        c.visible=elapsed>.35;
+        // Shared depth expansion prevents intersecting cards while x/y/roll remain staggered.
+        c.position.set(lerp(offset*.009,p.x,motion.fan),lerp(liftY,p.y,motion.fan)+Math.sin(motion.fanTime*Math.PI)*.14,lerp(stackZ,p.z+.35,m.fanDepth));
+        const stackRoll=-.095*(1-smooth((elapsed-.9)/.5));
+        c.rotation.set(Math.sin(m.fanTime*Math.PI)*.014,p.ry*m.fanDepth,stackRoll+p.rz*motion.fan);
+        c.scale.setScalar(lerp(.88,p.scale,m.fanDepth));
       });
-      if(elapsed>=2.4){pouch.visible=false;phase='collection';collectionAt=now;callbacks.onPhase?.(phase);}
+      if(elapsed>=OPENING_DURATION){pouch.visible=false;mouthClip.set(new THREE.Vector3(0,1,0),10000);phase='collection';collectionAt=now;callbacks.onPhase?.(phase);}
     }
     if(phase==='collection'){
       const entry=easeOutCubic((now-collectionAt)/0.4);
       cards.forEach((c,i)=>{
-        const p=fanPose(i),lift=hover===i?0.14:0;
-        c.visible=true;c.position.lerp(new THREE.Vector3(p.x,p.y+lift,p.z+0.5),smoothing);c.rotation.x=lerp(c.rotation.x,0,smoothing);c.rotation.y=lerp(c.rotation.y,0,smoothing);c.rotation.z=lerp(c.rotation.z,p.rz,smoothing);c.scale.setScalar(lerp(c.scale.x,p.scale*(hover===i?1.03:1),smoothing*entry));
+        const p=fanPose(i),lift=hover===i?.18:0;
+        c.visible=true;c.position.lerp(new THREE.Vector3(p.x,p.y+lift,p.z+.35),smoothing);c.rotation.x=lerp(c.rotation.x,hover===i?-.025:0,smoothing);c.rotation.y=lerp(c.rotation.y,hover===i?0:p.ry,smoothing);c.rotation.z=lerp(c.rotation.z,hover===i?p.rz*.7:p.rz,smoothing);c.scale.setScalar(lerp(c.scale.x,p.scale*(hover===i?1.035:1),smoothing*entry));
       });
     }
     if(phase==='inspect'){
@@ -217,7 +252,7 @@ export async function createScene(canvas, members, callbacks) {
         }else {c.visible=false;}
       });
     }
-    shadow.material.opacity=lerp(shadow.material.opacity,phase==='pack'?0.62:phase==='opening'?0.4:phase==='inspect'?0.18:0.23,smoothing);
+    shadow.material.opacity=lerp(shadow.material.opacity,phase==='pack'?.45:phase==='opening'?.15:phase==='inspect'?.14:.23,smoothing);
     renderer.render(scene,camera);
   }
   frameId=requestAnimationFrame(animate);
@@ -227,8 +262,8 @@ export async function createScene(canvas, members, callbacks) {
     return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};
   }
   return {
-    open,inspect,collection,reset,flip,setProgress,
-    state:()=>({phase,selected,flipped,progress,rotation:{x:rotationX,y:rotationY},cardOrientation:selected>=0?{x:cards[selected].rotation.x,y:cards[selected].rotation.y,z:cards[selected].rotation.z}:null,fps,frameCount,contextLost,avatars:avatars.map(Boolean),size:{width,height},cardCount:cards.length}),
+    open,inspect,collection,reset,flip,setProgress,holdSeal,
+    state:()=>({phase,selected,flipped,progress,rotation:{x:rotationX,y:rotationY},cardOrientation:selected>=0?{x:cards[selected].rotation.x,y:cards[selected].rotation.y,z:cards[selected].rotation.z}:null,openingStage,package:{y:pouch.position.y,opacity:frontMaterial.opacity},cards:cards.map(c=>({visible:c.visible,x:c.position.x,y:c.position.y,z:c.position.z,rotationZ:c.rotation.z})),fps,frameCount,contextLost,avatars:avatars.map(Boolean),size:{width,height},cardCount:cards.length}),
     projectCard:index=>project(cards[index]),
     projectPack:()=>project(pouch),
     artwork:()=>artworks.map((a,i)=>({id:members[i].id,front:a.frontCanvas.toDataURL('image/png'),back:a.backCanvas.toDataURL('image/png')})),

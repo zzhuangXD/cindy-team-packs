@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/geometry.test.js",
     "test:browser": "node tests/browser.mjs",
+    "test:motion": "node tests/motion.mjs",
     "test:webkit": "node tests/webkit.mjs"
   },
   "dependencies": { "three": "0.186.1" },

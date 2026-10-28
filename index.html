@@ -20,14 +20,17 @@
         <section class="experience" id="experience" data-phase="pack" aria-labelledby="experience-title">
           <div class="editorial-intro">
             <p class="eyebrow">MEET YOUR COLLECTIVE <span>— VOL. 01</span></p>
-            <h1 id="experience-title">Good things <br />come in <em>packs.</em></h1>
+            <h1 id="experience-title">Meet the <br /><em>collective.</em></h1>
             <p class="intro-copy">四位伙伴，四种超能力。<br />拆开这一包，认识我们。</p>
             <span class="edition-note">ORIGINAL SERIES / 4 MEMBERS</span>
           </div>
           <div class="margin-note"><span class="tiny-cross">+</span><span>IDEAS, IN GOOD COMPANY.</span></div>
 
           <div class="stage" id="stage">
-            <canvas id="scene" tabindex="0" aria-label="可交互的 3D 伙伴卡包，拖动旋转；使用下方滑块或拆包按钮开启"></canvas>
+            <canvas id="scene" tabindex="0" aria-label="可交互的 3D 伙伴卡包，拖动旋转；沿顶部封口向右滑动开启"></canvas>
+            <div class="tear-track" id="tear-track" role="slider" tabindex="0" aria-label="向右滑动拆开卡包" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="尚未拆封" hidden>
+              <span class="tear-fill"></span><span class="tear-label">PULL TO OPEN</span><span class="tear-knob" aria-hidden="true">→</span>
+            </div>
             <div class="stage-loading" id="loading" role="status"><span class="loading-orbit">✳</span><span>PREPARING YOUR PACK</span></div>
             <div class="stage-fallback" id="fallback" hidden>
               <p>当前浏览器未能启动 3D 画面。</p><p>你仍然可以打开下方成员介绍。</p>
@@ -40,10 +43,7 @@
 
           <div class="interaction-dock" id="interaction-dock">
             <div class="pack-controls" id="pack-controls">
-              <div class="tear-track" id="tear-track" role="slider" tabindex="0" aria-label="向右滑动拆开卡包" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="尚未拆封">
-                <span class="tear-fill"></span><span class="tear-label">SLIDE TO UNPACK <span>沿封口向右滑开</span></span><span class="tear-knob" aria-hidden="true">↗</span>
-              </div>
-              <div class="dock-caption"><span>拖动卡包，360° 看看</span><button class="text-button" id="open-pack">直接拆开 <span>↗</span></button></div>
+              <div class="dock-caption"><span>转一转，再沿顶部封口向右滑开</span><button class="text-button" id="open-pack">直接拆开 <span>↗</span></button></div>
             </div>
             <div class="collection-controls" id="collection-controls" hidden>
               <p class="collection-hint">YOUR PEOPLE, ALL HERE. <span>点选一张，认识一位伙伴</span></p>
