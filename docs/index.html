@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f2f0e9" />
+    <meta name="description" content="四位伙伴，一个灵感卡包。旋转、拆封，认识 Muses、Hermes、Ruby 和 Hecate。" />
+    <title>Cindy & friends — The Team Pack</title>
+    <link rel="icon" type="image/svg+xml" href="./mark.svg" />
+    <script type="module" crossorigin src="./assets/index-Bx82m_s5.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DzWURrCb.css">
+  </head>
+  <body>
+    <div id="app">
+      <header class="site-header">
+        <a class="wordmark" href="./" aria-label="Cindy & friends 首页">cindy<span class="brand-star">✳</span><span class="wordmark-small">& friends</span></a>
+        <div class="header-center"><span class="status-dot"></span>A SMALL TEAM. A WHOLE WORLD.</div>
+        <button class="sound-button" id="sound" aria-label="开启音效" aria-pressed="false"><span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i></span><span id="sound-label">SOUND OFF</span></button>
+      </header>
+
+      <main>
+        <section class="experience" id="experience" data-phase="pack" aria-labelledby="experience-title">
+          <div class="editorial-intro">
+            <p class="eyebrow">MEET YOUR COLLECTIVE <span>— VOL. 01</span></p>
+            <h1 id="experience-title">Good things <br />come in <em>packs.</em></h1>
+            <p class="intro-copy">四位伙伴，四种超能力。<br />拆开这一包，认识我们。</p>
+            <span class="edition-note">ORIGINAL SERIES / 4 MEMBERS</span>
+          </div>
+          <div class="margin-note"><span class="tiny-cross">+</span><span>IDEAS, IN GOOD COMPANY.</span></div>
+
+          <div class="stage" id="stage">
+            <canvas id="scene" tabindex="0" aria-label="可交互的 3D 伙伴卡包，拖动旋转；使用下方滑块或拆包按钮开启"></canvas>
+            <div class="stage-loading" id="loading" role="status"><span class="loading-orbit">✳</span><span>PREPARING YOUR PACK</span></div>
+            <div class="stage-fallback" id="fallback" hidden>
+              <p>当前浏览器未能启动 3D 画面。</p><p>你仍然可以打开下方成员介绍。</p>
+              <button id="fallback-open" class="text-button">查看四位伙伴 ↗</button>
+            </div>
+            <span class="scene-coordinate" aria-hidden="true">C / F · 001</span>
+            <span class="scene-rotation" id="rotation-label" aria-hidden="true">360° OBJECT VIEW</span>
+            <div class="member-detail" id="member-detail" hidden></div>
+          </div>
+
+          <div class="interaction-dock" id="interaction-dock">
+            <div class="pack-controls" id="pack-controls">
+              <div class="tear-track" id="tear-track" role="slider" tabindex="0" aria-label="向右滑动拆开卡包" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="尚未拆封">
+                <span class="tear-fill"></span><span class="tear-label">SLIDE TO UNPACK <span>沿封口向右滑开</span></span><span class="tear-knob" aria-hidden="true">↗</span>
+              </div>
+              <div class="dock-caption"><span>拖动卡包，360° 看看</span><button class="text-button" id="open-pack">直接拆开 <span>↗</span></button></div>
+            </div>
+            <div class="collection-controls" id="collection-controls" hidden>
+              <p class="collection-hint">YOUR PEOPLE, ALL HERE. <span>点选一张，认识一位伙伴</span></p>
+              <nav class="member-tabs" id="member-tabs" aria-label="选择成员"></nav>
+              <button class="text-button replay" id="replay">↺ 再拆一包</button>
+            </div>
+            <div class="inspect-controls" id="inspect-controls" hidden>
+              <button class="round-button" id="previous" aria-label="上一位成员">←</button>
+              <button class="pill-button" id="flip-card">翻到背面 <span>⤾</span></button>
+              <button class="round-button" id="next" aria-label="下一位成员">→</button>
+              <button class="text-button back-button" id="back-to-team">返回全员 <span>↗</span></button>
+            </div>
+          </div>
+          <div class="opening-caption" id="opening-caption" role="status" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <footer class="site-footer"><span>MADE OF DIFFERENT KINDS OF MAGIC.</span><a href="https://raspberrytokyo.com/" target="_blank" rel="noopener noreferrer">PACK INTERACTION INSPIRED BY RASPBERRY STUDIO ↗</a><span class="footer-edition">CINDY COLLECTIVE © 2026</span></footer>
+      <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+    </div>
+  </body>
+</html>

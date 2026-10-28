@@ -1,2 +1,4 @@
 docs/** linguist-generated=true
 docs/assets/* -whitespace
+docs/licenses/* -whitespace
+public/licenses/* linguist-vendored=true -whitespace
